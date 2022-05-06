@@ -55,7 +55,8 @@ constexpr Real G    = 6.67259e-8;   // gravitational constant, dyn cm^2 g^-2
 Real m0, v0, t0, l0, rho0;
 
 // parameters and derivatives
-Real mass, temp, f, rhocrit;
+//Real mass, temp, f, rhocrit;
+Real mass, temp, f, rhocrit, b0;
 
 // AMR parameter
 Real njeans; // Real is used intentionally 
@@ -173,7 +174,7 @@ void Cooling(MeshBlock *pmb, const Real time, const Real dt,
                   * (SQR(cons(IM1,k,j,i)) + SQR(cons(IM2,k,j,i)) + SQR(cons(IM3,k,j,i)));
           Real me = 0.5*(SQR(bcc(IB1,k,j,i)) + SQR(bcc(IB2,k,j,i)) + SQR(bcc(IB3,k,j,i)));
           Real te = igm1 * cons(IDN,k,j,i)
-                  * std::max(1.1, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
+                  * std::max(1.0, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
           cons(IEN,k,j,i) = te + ke + me;
         }
       }
@@ -185,7 +186,7 @@ void Cooling(MeshBlock *pmb, const Real time, const Real dt,
           Real ke = 0.5 / cons(IDN,k,j,i)
                   * (SQR(cons(IM1,k,j,i)) + SQR(cons(IM2,k,j,i)) + SQR(cons(IM3,k,j,i)));
           Real te = igm1 * cons(IDN,k,j,i)
-                  * std::max(1.1, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
+                  * std::max(1.0, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
           cons(IEN,k,j,i) = te + ke;
         }
       }
@@ -208,6 +209,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   mass = pin->GetReal("problem", "mass");
   temp = pin->GetReal("problem", "temperature");
   f = pin->GetReal("problem", "f"); // Density enhancement factor; f = 1 is critical
+  b0  = pin->GetReal("problem", "b0");
   m0 = mass * msun / (bemass*f);
   v0 = cs10 * std::sqrt(temp/10.0);
   rho0 = (v0*v0*v0*v0*v0*v0) / (m0*m0) /(64.0*pi*pi*pi*G*G*G);
