@@ -28,6 +28,7 @@ bin/
 *.out
 *.app
 athena
+*.d
 
 # Athena output files
 *.tab
