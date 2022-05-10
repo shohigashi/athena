@@ -232,7 +232,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
       << "Cloud radius        : " << rc*l0/au  << " \t\t[au]" << std::endl
       << "Free fall time      : " << tff*t0/yr << " \t\t[yr]" << std::endl
       << "Density Enhancement : " << f         << std::endl
-      << "Magnetic field      : " << b0        << " \t\t[G]" << std::endl
+      << "Magnetic field      : " << b0*std::sqrt(4*M_PI)        << " \t\t[G]" << std::endl
       << std::endl
       << "---   Normalization Units of the simulation    ---" << std::endl
       << "Mass                : " << m0        << " \t[g]" << std::endl
@@ -244,7 +244,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
       << "Time                : " << t0/yr     << " \t\t[yr]" << std::endl
       << "Velocity            : " << v0        << " \t\t[cm s^-1]" << std::endl
       << "Density             : " << rho0      << " \t[g cm^-3]" << std::endl
-      << "Magnetic field      : " << b0        << " \t\t[G]" << std::endl
+      << "Magnetic field      : " << b0*std::sqrt(4*M_PI) << " \t\t[G]" << std::endl
       << std::endl
       << "--- Dimensionless parameters of the simulation ---" << std::endl
       << "Total mass          : " << bemass*f  << std::endl
@@ -252,7 +252,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
       << "Central density     : " << 1.0       << std::endl
       << "Cloud radius        : " << rc        << std::endl
       << "Free fall time      : " << tff       << std::endl
-      << "Magnetic field      : " << b0        << " \t\t[G]" << std::endl
+      << "Magnetic field      : " << b0*std::sqrt(4*M_PI) << " \t\t[G]" << std::endl
       << std::endl;
   }
 
@@ -288,7 +288,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
         phydro->u(IM3,k,j,i) = 0.0;
-        phydro0>
         if (NON_BAROTROPIC_EOS)
           phydro->u(IEN,k,j,i) = igm1 * phydro->u(IDN,k,j,i); // c_s = 1
       }
@@ -298,28 +297,31 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie+1; ++i) {
-        pfield->bcc(IB1,k,j,i) = 0.0;
+        pfield->b.x1f(k,j,i) = 0.0;
+        //pfield->bcc(IB1,k,j,i) = 0.0;
         }
       }
     }
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je+1; ++j) {
         for (int i=is; i<=ie; ++i) {
-        pfield->bcc(IB2,k,j,i) = b0;
+        pfield->b.x2f(k,j,i) = 0.0;
+        //pfield->bcc(IB2,k,j,i) = 0.0;
         }
       }
     }
     for (int k=ks; k<=ke+1; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie; ++i) {
-        pfield->bcc(IB3,k,j,i) = b0;
+        pfield->b.x3f(k,j,i) = b0;
+        //pfield->bcc(IB3,k,j,i) = 1.0e-5;
         }
       }
     }
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie; ++i) {
-          phydro->u(IEN,k,j,i) += 0.5*(SQR(bcc(IB1,k,j,i)) + SQR(bcc(IB2,k,j,i)) + SQR(bcc(IB3,k,j,i)));
+          phydro->u(IEN,k,j,i) += 0.5*SQR(b0);
         }
       }
     }

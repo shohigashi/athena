@@ -836,3 +836,33 @@ if args['hdf5']:
 print('  Compiler:                   ' + args['cxx'])
 print('  Compilation command:        ' + makefile_options['COMPILER_COMMAND'] + ' '
       + makefile_options['PREPROCESSOR_FLAGS'] + ' ' + makefile_options['COMPILER_FLAGS'])
+
+with open('complog.d','w') as outf:
+    outf.write('Your Athena++ distribution has now been configured with the following options:'+'\n')
+    outf.write('  Problem generator:          ' + args['prob']+'\n')
+    outf.write('  Coordinate system:          ' + args['coord']+'\n')
+    outf.write('  Equation of state:          ' + args['eos']+'\n')
+    outf.write('  Riemann solver:             ' + args['flux']+'\n')
+    outf.write('  Magnetic fields:            ' + ('ON' if args['b'] else 'OFF')+'\n')
+    outf.write('  Number of scalars:          ' + args['nscalars']+'\n')
+    outf.write('  Special relativity:         ' + ('ON' if args['s'] else 'OFF')+'\n')
+    outf.write('  General relativity:         ' + ('ON' if args['g'] else 'OFF')+'\n')
+    outf.write('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF')+'\n')
+    outf.write('  Self-Gravity:               ' + self_grav_string+'\n')
+    outf.write('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF')+'\n')
+    outf.write('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF')+'\n')
+    outf.write('  Code coverage flags:        ' + ('ON' if args['coverage'] else 'OFF')+'\n')
+    outf.write('  Linker flags:               ' + makefile_options['LINKER_FLAGS'] + ' '
+          + makefile_options['LIBRARY_FLAGS']+'\n')
+    outf.write('  Floating-point precision:   ' + ('single' if args['float'] else 'double')+'\n')
+    outf.write('  Number of ghost cells:      ' + args['nghost']+'\n')
+    outf.write('  MPI parallelism:            ' + ('ON' if args['mpi'] else 'OFF')+'\n')
+    outf.write('  OpenMP parallelism:         ' + ('ON' if args['omp'] else 'OFF')+'\n')
+    outf.write('  FFT:                        ' + ('ON' if args['fft'] else 'OFF')+'\n')
+    outf.write('  HDF5 output:                ' + ('ON' if args['hdf5'] else 'OFF')+'\n')
+    if args['hdf5']:
+        outf.write('  HDF5 precision:             ' + ('double' if args['h5double'] else 'single')+'\n')
+    outf.write('  Compiler:                   ' + args['cxx']+'\n')
+    outf.write('  Compilation command:        ' + makefile_options['COMPILER_COMMAND'] + ' '
+          + makefile_options['PREPROCESSOR_FLAGS'] + ' ' + makefile_options['COMPILER_FLAGS']+'\n')
+
