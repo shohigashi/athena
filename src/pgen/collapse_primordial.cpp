@@ -56,7 +56,8 @@ Real m0, v0, t0, l0, rho0;
 
 // parameters and derivatives
 //Real mass, temp, f, rhocrit;
-Real mass, temp, f, rhocrit, b0;
+Real mass, temp, f, rhocrit, b0; // b-field is added
+// Real angle; // reserved
 
 // AMR parameter
 Real njeans; // Real is used intentionally 
@@ -209,7 +210,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   mass = pin->GetReal("problem", "mass");
   temp = pin->GetReal("problem", "temperature");
   f = pin->GetReal("problem", "f"); // Density enhancement factor; f = 1 is critical
-  b0  = pin->GetReal("problem", "b0");
   m0 = mass * msun / (bemass*f);
   v0 = cs10 * std::sqrt(temp/10.0);
   rho0 = (v0*v0*v0*v0*v0*v0) / (m0*m0) /(64.0*pi*pi*pi*G*G*G);
@@ -217,16 +217,23 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   l0 = v0 * t0;
   rhocrit = pin->GetReal("problem", "rhocrit") / rho0;
   Real tff = sqrt(3.0/8.0)*pi;
+  if (MAGNETIC_FIELDS_ENABLED){
+    b0  = pin->GetReal("problem", "b0")/std::sqrt(4*M_PI);
+  }else{
+    b0 = 0.0;
+  }
   if (Globals::my_rank == 0 && ncycle == 0) {
     std::cout << std::endl
       << "---  Dimensional parameters of the simulation  ---" << std::endl
       << "Total mass          : " << mass      << " \t\t[Msun]" << std::endl
       << "Initial temperature : " << temp      << " \t\t[K]" << std::endl
-      << "Sound speed         : " << v0        << " \t\t[cm s^-1]" << std::endl 
+      << "Sound speed         : " << v0        << " \t\t[cm s^-1]" << std::endl
       << "Central density     : " << rho0      << " \t[g cm^-3]" << std::endl
       << "Cloud radius        : " << rc*l0/au  << " \t\t[au]" << std::endl
       << "Free fall time      : " << tff*t0/yr << " \t\t[yr]" << std::endl
-      << "Density Enhancement : " << f         << std::endl << std::endl
+      << "Density Enhancement : " << f         << std::endl
+      << "Magnetic field      : " << b0        << " \t\t[G]" << std::endl
+      << std::endl
       << "---   Normalization Units of the simulation    ---" << std::endl
       << "Mass                : " << m0        << " \t[g]" << std::endl
       << "Mass                : " << m0/msun   << " \t[Msun]" << std::endl
@@ -236,13 +243,17 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
       << "Time                : " << t0        << " \t[s]" << std::endl
       << "Time                : " << t0/yr     << " \t\t[yr]" << std::endl
       << "Velocity            : " << v0        << " \t\t[cm s^-1]" << std::endl
-      << "Density             : " << rho0      << " \t[g cm^-3]" << std::endl << std::endl
+      << "Density             : " << rho0      << " \t[g cm^-3]" << std::endl
+      << "Magnetic field      : " << b0        << " \t\t[G]" << std::endl
+      << std::endl
       << "--- Dimensionless parameters of the simulation ---" << std::endl
       << "Total mass          : " << bemass*f  << std::endl
       << "Sound speed at " << temp << " K : "  << 1.0 << std::endl
       << "Central density     : " << 1.0       << std::endl
       << "Cloud radius        : " << rc        << std::endl
-      << "Free fall time      : " << tff       << std::endl << std::endl;
+      << "Free fall time      : " << tff       << std::endl
+      << "Magnetic field      : " << b0        << " \t\t[G]" << std::endl
+      << std::endl;
   }
 
   EnrollUserMGGravitySourceMaskFunction(SourceMask);
@@ -265,7 +276,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real igm1 = 1.0 / (peos->GetGamma() - 1.0);
-
   for (int k=ks; k<=ke; ++k) {
     Real z = pcoord->x3v(k);
     for (int j=js; j<=je; ++j) {
@@ -278,8 +288,39 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
         phydro->u(IM3,k,j,i) = 0.0;
+        phydro0>
         if (NON_BAROTROPIC_EOS)
           phydro->u(IEN,k,j,i) = igm1 * phydro->u(IDN,k,j,i); // c_s = 1
+      }
+    }
+  }
+  if (MAGNETIC_FIELDS_ENABLED){
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie+1; ++i) {
+        pfield->bcc(IB1,k,j,i) = 0.0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je+1; ++j) {
+        for (int i=is; i<=ie; ++i) {
+        pfield->bcc(IB2,k,j,i) = b0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke+1; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+        pfield->bcc(IB3,k,j,i) = b0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          phydro->u(IEN,k,j,i) += 0.5*(SQR(bcc(IB1,k,j,i)) + SQR(bcc(IB2,k,j,i)) + SQR(bcc(IB3,k,j,i)));
+        }
       }
     }
   }
