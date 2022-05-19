@@ -1,0 +1,80 @@
+<comment>
+problem   = Protostellar collapse
+reference = 
+configure = --prob=collapse_primordial --grav mg -mpi -hdf5 --hlux=hllc -h5double --mpiccmd=mpiicpc --nghost=4
+#configure_wb = --prob=collapse_primordial --grav mg -mpi -hdf5 -b --hlux=hlld -h5double --mpiccmd=mpiicpc
+
+<job>
+problem_id = Collapse   # problem ID: basename of output filenames
+
+
+<output1>
+file_type  = hdf5       # Binary data dump
+variable   = prim       # variables to be output
+#dt         = 0.5        # time increment between outputs
+dcycle     = 50        # cycle increment between outputs
+
+<output2>
+file_type  = hst        # History data dump
+dt         = 0.01       # time increment between outputs
+
+<time>
+cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = 2500         # cycle limit
+tlim       = 30.0        # time limit
+integrator = rk3        # time integration algorithm
+xorder     = 3          # order of spatial reconstruction 3:PPM applied to primitive val, 3c:to characteristic val
+ncycle_out = 10          # interval for stdout summary info
+
+<mesh>
+nx1        = 128        # Number of zones in X1-direction
+x1min      = -16.0      # minimum value of X1
+x1max      =  16.0      # maximum value of X1
+ix1_bc     = periodic   # inner-X1 boundary flag
+ox1_bc     = periodic   # outer-X1 boundary flag
+
+nx2        = 128        # Number of zones in X2-direction
+x2min      = -16.0      # minimum value of X2
+x2max      =  16.0      # maximum value of X2
+ix2_bc     = periodic   # inner-X2 boundary flag
+ox2_bc     = periodic   # outer-X2 boundary flag
+
+nx3        = 128        # Number of zones in X3-direction
+x3min      = -16.0      # minimum value of X3
+x3max      =  16.0      # maximum value of X3
+ix3_bc     = periodic   # inner-X3 boundary flag
+ox3_bc     = periodic   # outer-X3 boundary flag
+
+refinement = adaptive
+derefine_count = 10
+numlevel       = 30
+
+<meshblock>
+nx1         = 32
+nx2         = 32
+nx3         = 32
+
+<hydro>
+gamma           = 1.6666666666666667   # gamma = C_p/C_v
+iso_sound_speed = 1.0   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
+
+<gravity>
+mgmode          = FMG
+threshold       = 0.0
+output_defect   = true
+ix1_bc          = multipole
+ox1_bc          = multipole
+ix2_bc          = multipole
+ox2_bc          = multipole
+ix3_bc          = multipole
+ox3_bc          = multipole
+mporder         = 4
+
+<problem>
+geff            = 1.0 # effective gamma below critical density
+mass            = 1.0   # total mass in solar mass
+temperature     = 10.0  # initial temperature
+f               = 1.2   # density enhancement
+njeans          = 4    # the number of the Jeans length for AMR
+rhocrit         = 1e-8 # the density where the gas becomes adiabatic [g cm^-3]
+b0              = 1e5 # B-field strength in z-axis [G]
