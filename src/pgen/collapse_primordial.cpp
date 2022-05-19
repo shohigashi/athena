@@ -56,7 +56,7 @@ Real m0, v0, t0, l0, rho0;
 
 // parameters and derivatives
 //Real mass, temp, f, rhocrit;
-Real mass, temp, f, rhocrit, b0; // b-field is added
+Real mass, temp, f, rhocrit, b0, geff; // b-field is added
 // Real angle; // reserved
 
 // AMR parameter
@@ -167,6 +167,7 @@ void Cooling(MeshBlock *pmb, const Real time, const Real dt,
              AthenaArray<Real> &cons_scalar) {
   const Real gm1 = pmb->peos->GetGamma() - 1.0;
   const Real igm1 = 1.0 / gm1;
+  const Real geff1 = geff - 1.0;
   if (MAGNETIC_FIELDS_ENABLED) {
     for (int k=pmb->ks; k<=pmb->ke; ++k) {
       for (int j=pmb->js; j<=pmb->je; ++j) {
@@ -174,8 +175,11 @@ void Cooling(MeshBlock *pmb, const Real time, const Real dt,
           Real ke = 0.5 / cons(IDN,k,j,i)
                   * (SQR(cons(IM1,k,j,i)) + SQR(cons(IM2,k,j,i)) + SQR(cons(IM3,k,j,i)));
           Real me = 0.5*(SQR(bcc(IB1,k,j,i)) + SQR(bcc(IB2,k,j,i)) + SQR(bcc(IB3,k,j,i)));
+//          Real te = igm1 * cons(IDN,k,j,i)
+//                  * std::max(1.0, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
           Real te = igm1 * cons(IDN,k,j,i)
-                  * std::max(1.0, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
+                  * std::max(std::pow(cons(IDN,k,j,i)/rhocrit,geff1), std::pow(cons(IDN,k,j,i)/rhocrit, gm1))
+                  / std::pow(1.0/rhocrit,geff1);
           cons(IEN,k,j,i) = te + ke + me;
         }
       }
@@ -186,8 +190,11 @@ void Cooling(MeshBlock *pmb, const Real time, const Real dt,
         for (int i=pmb->is; i<=pmb->ie; ++i) {
           Real ke = 0.5 / cons(IDN,k,j,i)
                   * (SQR(cons(IM1,k,j,i)) + SQR(cons(IM2,k,j,i)) + SQR(cons(IM3,k,j,i)));
+//          Real te = igm1 * cons(IDN,k,j,i)
+//                  * std::max(1.0, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
           Real te = igm1 * cons(IDN,k,j,i)
-                  * std::max(1.0, std::pow(cons(IDN,k,j,i)/rhocrit, gm1));
+                  * std::max(std::pow(cons(IDN,k,j,i)/rhocrit,geff1), std::pow(cons(IDN,k,j,i)/rhocrit, gm1))
+                  / std::pow(1.0/rhocrit,geff1);
           cons(IEN,k,j,i) = te + ke;
         }
       }
@@ -210,6 +217,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   mass = pin->GetReal("problem", "mass");
   temp = pin->GetReal("problem", "temperature");
   f = pin->GetReal("problem", "f"); // Density enhancement factor; f = 1 is critical
+  geff = pin->GetReal("problem","geff");
   m0 = mass * msun / (bemass*f);
   v0 = cs10 * std::sqrt(temp/10.0);
   rho0 = (v0*v0*v0*v0*v0*v0) / (m0*m0) /(64.0*pi*pi*pi*G*G*G);
@@ -265,7 +273,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     njeans = pin->GetReal("problem","njeans");
     EnrollUserRefinementCondition(JeansCondition);
   }
-
   return;
 }
 
@@ -328,4 +335,34 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 }
 
+//========================================================================================
+/* User defined output */
+//========================================================================================
 
+//========================================================================================
+//! \fn void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
+//  \brief
+//========================================================================================
+void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
+{
+    AllocateUserOutputVariables(2); // temperature, plasma beta
+    return;
+}
+//========================================================================================
+//! \fn void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin)
+//  \brief
+//========================================================================================
+void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin)
+{
+    for(int k=ks; k<=ke; k++) {
+      for(int j=js; j<=je; j++) {
+        for(int i=is; i<=ie; i++) {
+           Real pmag = 0.5*(SQR(pfield->bcc(IB1,k,j,i))
+                     +SQR(pfield->bcc(IB2,k,j,i))
+                     +SQR(pfield->bcc(IB3,k,j,i)));
+           user_out_var(0,k,j,i) = phydro->w(IPR,k,j,i)/phydro->w(IDN,k,j,i);
+           user_out_var(1,k,j,i) = phydro->w(IPR,k,j,i)/pmag;
+        }
+      }
+    }
+}
