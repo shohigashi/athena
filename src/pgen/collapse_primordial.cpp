@@ -352,7 +352,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       //start_field_mem[2] = is;
       int count_field_mem[3] = {turb_dim,turb_dim,turb_dim};
 
-      //#count_field_file[1] = block_size.nx3;
+      //count_field_file[1] = block_size.nx3;
       //count_field_file[2] = block_size.nx2;
       //count_field_file[3] = block_size.nx1 +1;
       //count_field_mem[0] = block_size.nx3;
