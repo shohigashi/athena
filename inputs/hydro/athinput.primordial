@@ -3,6 +3,7 @@ problem   = Protostellar collapse
 reference = 
 configure = --prob=collapse_primordial --grav mg -mpi -hdf5 --hlux=hllc -h5double --mpiccmd=mpiicpc --nghost=4
 #configure_wb = --prob=collapse_primordial --grav mg -mpi -hdf5 -b --hlux=hlld -h5double --mpiccmd=mpiicpc
+### To check the initial conditions, should run with 64 process
 
 <job>
 problem_id = Collapse   # problem ID: basename of output filenames
@@ -71,10 +72,10 @@ ox3_bc          = multipole
 mporder         = 4
 
 <problem>
-geff            = 1.0 # effective gamma below critical density
-mass            = 1.0   # total mass in solar mass
-temperature     = 10.0  # initial temperature
-f               = 1.2   # density enhancement
-njeans          = 4    # the number of the Jeans length for AMR
-rhocrit         = 1e-8 # the density where the gas becomes adiabatic [g cm^-3]
-b0              = 1e5 # B-field strength in z-axis [G]
+geff            = 1.1 # effective gamma below critical density
+mass            = 1700   # total mass in solar mass
+temperature     = 200.0  # initial temperature
+f               = 1.99   # density enhancement
+njeans          = 32    # the number of the Jeans length for AMR
+rhocrit         = 1e-4 # the density where the gas becomes adiabatic [g cm^-3]
+b0              = 0.0 # B-field strength in z-axis [G]

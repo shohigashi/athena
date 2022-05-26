@@ -27,6 +27,7 @@
 #include "../mesh/mesh.hpp"
 #include "../multigrid/multigrid.hpp"
 #include "../parameter_input.hpp"
+#include "../inputs/hdf5_reader.hpp"  // HDF5ReadRealArray()
 
 #if SELF_GRAVITY_ENABLED != 2
 #error "This problem generator requires Multigrid gravity solver."
@@ -45,6 +46,7 @@ constexpr Real bemass = 197.561;       // the total mass of the critical BE sphe
 // dimensional constants
 constexpr Real pi   = M_PI;
 constexpr Real cs10 = 1.9e4;        // sound speed at 10K, cm / s 
+constexpr Real cs200 = 1.214e5;        // sound speed at 200K, cm / s 
 constexpr Real msun = 1.9891e33;    // solar mass, g
 constexpr Real pc   = 3.0857000e18; // parsec, cm
 constexpr Real au   = 1.4959787e13; // astronomical unit, cm
@@ -219,17 +221,20 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   f = pin->GetReal("problem", "f"); // Density enhancement factor; f = 1 is critical
   geff = pin->GetReal("problem","geff");
   m0 = mass * msun / (bemass*f);
-  v0 = cs10 * std::sqrt(temp/10.0);
+  //v0 = cs10 * std::sqrt(temp/10.0);
+  v0 = cs200 * std::sqrt(temp/200.0);
   rho0 = (v0*v0*v0*v0*v0*v0) / (m0*m0) /(64.0*pi*pi*pi*G*G*G);
   t0 = 1.0/std::sqrt(4.0*pi*G*rho0);
   l0 = v0 * t0;
   rhocrit = pin->GetReal("problem", "rhocrit") / rho0;
   Real tff = sqrt(3.0/8.0)*pi;
+
   if (MAGNETIC_FIELDS_ENABLED){
     b0  = pin->GetReal("problem", "b0")/std::sqrt(4*M_PI);
   }else{
     b0 = 0.0;
   }
+
   if (Globals::my_rank == 0 && ncycle == 0) {
     std::cout << std::endl
       << "---  Dimensional parameters of the simulation  ---" << std::endl
@@ -237,7 +242,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
       << "Initial temperature : " << temp      << " \t\t[K]" << std::endl
       << "Sound speed         : " << v0        << " \t\t[cm s^-1]" << std::endl
       << "Central density     : " << rho0      << " \t[g cm^-3]" << std::endl
-      << "Cloud radius        : " << rc*l0/au  << " \t\t[au]" << std::endl
+      << "Cloud radius        : " << rc*l0/pc  << " \t\t[pc]" << std::endl
       << "Free fall time      : " << tff*t0/yr << " \t\t[yr]" << std::endl
       << "Density Enhancement : " << f         << std::endl
       << "Magnetic field      : " << b0*std::sqrt(4*M_PI)        << " \t\t[G]" << std::endl
@@ -292,20 +297,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
         r = std::min(r, rc); // pressure confinement - constant beyond the cloud radius
         phydro->u(IDN,k,j,i) = BEProfile(r);
-        phydro->u(IM1,k,j,i) = 0.0;
-        phydro->u(IM2,k,j,i) = 0.0;
-        phydro->u(IM3,k,j,i) = 0.0;
+        //phydro->u(IM1,k,j,i) = 0.0;
+        //phydro->u(IM2,k,j,i) = 0.0;
+        //phydro->u(IM3,k,j,i) = 0.0;
         if (NON_BAROTROPIC_EOS)
           phydro->u(IEN,k,j,i) = igm1 * phydro->u(IDN,k,j,i); // c_s = 1
       }
     }
   }
+  
   if (MAGNETIC_FIELDS_ENABLED){
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie+1; ++i) {
         pfield->b.x1f(k,j,i) = 0.0;
-        //pfield->bcc(IB1,k,j,i) = 0.0;
         }
       }
     }
@@ -313,7 +318,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       for (int j=js; j<=je+1; ++j) {
         for (int i=is; i<=ie; ++i) {
         pfield->b.x2f(k,j,i) = 0.0;
-        //pfield->bcc(IB2,k,j,i) = 0.0;
         }
       }
     }
@@ -321,7 +325,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie; ++i) {
         pfield->b.x3f(k,j,i) = b0;
-        //pfield->bcc(IB3,k,j,i) = 1.0e-5;
         }
       }
     }
@@ -333,12 +336,74 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
   }
-}
+  // Determine locations of initial values
+  int USE_TURB_FROM_HDF5 = pin->GetOrAddBoolean("problem","use_turb_from_hdf5",false);
+  if (USE_TURB_FROM_HDF5){
+      std::string input_filename = pin->GetString("problem", "input_filename");
+      std::string dataset_v1 = pin->GetString("problem", "dataset_v1");
+      std::string dataset_v2 = pin->GetString("problem", "dataset_v2");
+      std::string dataset_v3 = pin->GetString("problem", "dataset_v3");
+      int turb_dim = pin->GetInteger("problem","turb_dim");
+      int start_field_file[3] = {0,0,0};
+      int count_field_file[3] = {turb_dim,turb_dim,turb_dim};
+      int start_field_mem[3] = {0,0,0};
+      //start_field_mem[0] = ks;
+      //start_field_mem[1] = js;
+      //start_field_mem[2] = is;
+      int count_field_mem[3] = {turb_dim,turb_dim,turb_dim};
 
+      //#count_field_file[1] = block_size.nx3;
+      //count_field_file[2] = block_size.nx2;
+      //count_field_file[3] = block_size.nx1 +1;
+      //count_field_mem[0] = block_size.nx3;
+      //count_field_mem[1] = block_size.nx2;
+      //count_field_mem[2] = block_size.nx1;
+      // Set field array selections
+      AthenaArray<Real> turb_x;
+      //turb_x.NewAthenaArray(ks,js,is);
+      turb_x.NewAthenaArray(turb_dim,turb_dim,turb_dim);
+      HDF5ReadRealArray(input_filename.c_str(), dataset_v1.c_str(), 3, start_field_file,
+                      count_field_file, 3, start_field_mem,
+                      count_field_mem, turb_x,true);//read x-velocity
+      AthenaArray<Real> turb_y;
+      turb_y.NewAthenaArray(turb_dim,turb_dim,turb_dim);
+      //turb_y.NewAthenaArray(ks,js,is);
+      HDF5ReadRealArray(input_filename.c_str(), dataset_v2.c_str(), 3, start_field_file,
+                      count_field_file, 3, start_field_mem,
+                      count_field_mem, turb_y,true);//read y-velocity
+      AthenaArray<Real> turb_z;
+      turb_z.NewAthenaArray(turb_dim,turb_dim,turb_dim);
+      //turb_z.NewAthenaArray(ks,js,is);
+      HDF5ReadRealArray(input_filename.c_str(), dataset_v3.c_str(), 3, start_field_file,
+                      count_field_file, 3, start_field_mem,
+                      count_field_mem, turb_z,true);//read y-velocity
+      for (int k=ks; k<=ke; ++k) {
+        for (int j=js; j<=je; ++j) {
+          for (int i=is; i<=ie; ++i) {
+              phydro->u(IM1,k,j,i) = phydro->u(IDN,k,j,i)*turb_x(k,j,i);
+              phydro->u(IM2,k,j,i) = phydro->u(IDN,k,j,i)*turb_y(k,j,i);
+              phydro->u(IM3,k,j,i) = phydro->u(IDN,k,j,i)*turb_z(k,j,i);
+          }
+        }
+      }
+    }else{
+      for (int k=ks; k<=ke; ++k) {
+        for (int j=js; j<=je; ++j) {
+          for (int i=is; i<=ie; ++i) {
+            phydro->u(IM1,k,j,i) = 0.0;
+            phydro->u(IM2,k,j,i) = 0.0;
+            phydro->u(IM3,k,j,i) = 0.0;
+          }
+        }
+      }
+    }
+
+}
 //========================================================================================
 /* User defined output */
 //========================================================================================
 
+/*
 //========================================================================================
 //! \fn void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
 //  \brief
@@ -366,3 +431,5 @@ void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin)
       }
     }
 }
+
+*/
