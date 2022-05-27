@@ -28,6 +28,7 @@
 #include "../multigrid/multigrid.hpp"
 #include "../parameter_input.hpp"
 #include "../inputs/hdf5_reader.hpp"  // HDF5ReadRealArray()
+#include "../fft/athena_fft.hpp"
 
 #if SELF_GRAVITY_ENABLED != 2
 #error "This problem generator requires Multigrid gravity solver."
@@ -228,6 +229,16 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   l0 = v0 * t0;
   rhocrit = pin->GetReal("problem", "rhocrit") / rho0;
   Real tff = sqrt(3.0/8.0)*pi;
+  turb_flag = pin->GetInteger("problem","turb_flag");
+  if (turb_flag != 0) {
+#ifndef FFT
+    std::stringstream msg;
+    msg << "### FATAL ERROR in TurbulenceDriver::TurbulenceDriver" << std::endl
+        << "non zero Turbulence flag is set without FFT!" << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+#endif
+  }
 
   if (MAGNETIC_FIELDS_ENABLED){
     b0  = pin->GetReal("problem", "b0")/std::sqrt(4*M_PI);
@@ -297,9 +308,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
         r = std::min(r, rc); // pressure confinement - constant beyond the cloud radius
         phydro->u(IDN,k,j,i) = BEProfile(r);
-        //phydro->u(IM1,k,j,i) = 0.0;
-        //phydro->u(IM2,k,j,i) = 0.0;
-        //phydro->u(IM3,k,j,i) = 0.0;
+        phydro->u(IM1,k,j,i) = 0.0;
+        phydro->u(IM2,k,j,i) = 0.0;
+        phydro->u(IM3,k,j,i) = 0.0;
         if (NON_BAROTROPIC_EOS)
           phydro->u(IEN,k,j,i) = igm1 * phydro->u(IDN,k,j,i); // c_s = 1
       }
@@ -337,44 +348,47 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
   }
   // Determine locations of initial values
-  int USE_TURB_FROM_HDF5 = pin->GetOrAddBoolean("problem","use_turb_from_hdf5",false);
+  //int USE_TURB_FROM_HDF5 = pin->GetOrAddBoolean("problem","use_turb_from_hdf5",false);
+  //if (USE_TURB_FROM_HDF5){
+  
+  /*
   if (USE_TURB_FROM_HDF5){
       std::string input_filename = pin->GetString("problem", "input_filename");
       std::string dataset_v1 = pin->GetString("problem", "dataset_v1");
       std::string dataset_v2 = pin->GetString("problem", "dataset_v2");
       std::string dataset_v3 = pin->GetString("problem", "dataset_v3");
       int turb_dim = pin->GetInteger("problem","turb_dim");
-      int start_field_file[3] = {0,0,0};
-      int count_field_file[3] = {turb_dim,turb_dim,turb_dim};
-      int start_field_mem[3] = {0,0,0};
-      //start_field_mem[0] = ks;
-      //start_field_mem[1] = js;
-      //start_field_mem[2] = is;
-      int count_field_mem[3] = {turb_dim,turb_dim,turb_dim};
-
-      //count_field_file[1] = block_size.nx3;
-      //count_field_file[2] = block_size.nx2;
-      //count_field_file[3] = block_size.nx1 +1;
-      //count_field_mem[0] = block_size.nx3;
-      //count_field_mem[1] = block_size.nx2;
-      //count_field_mem[2] = block_size.nx1;
+ */   /*
+      int start_field_file[4] = {gid,0,0,0};
+      //int count_field_file[4] = {1,turb_dim,turb_dim,turb_dim};
+      int count_field_file[4] = {1,block_size.nx3,block_size.nx2,block_size.nx1};
+      //int start_field_mem[3] = {0,0,0};
+      int start_field_mem[3] = {ks,js,is};
+      //int count_field_mem[3] = {turb_dim,turb_dim,turb_dim};
+      int count_field_mem[3] = {block_size.nx3,block_size.nx2,block_size.nx1};
+      if (Globals::my_rank == 0) {
+        for (int n=0;n<3;++n){
+        std::cout << "block_size:" << count_field_file[n] << std::endl; 
+        std::cout << "ks,js,is:" <<  start_field_mem[n] << std::endl; 
+        }
+      }
       // Set field array selections
       AthenaArray<Real> turb_x;
-      //turb_x.NewAthenaArray(ks,js,is);
+      //turb_x.NewAthenaArray(ke-ks,je-js,ie-is);
       turb_x.NewAthenaArray(turb_dim,turb_dim,turb_dim);
-      HDF5ReadRealArray(input_filename.c_str(), dataset_v1.c_str(), 3, start_field_file,
+      HDF5ReadRealArray(input_filename.c_str(), dataset_v1.c_str(), 4, start_field_file,
                       count_field_file, 3, start_field_mem,
                       count_field_mem, turb_x,true);//read x-velocity
       AthenaArray<Real> turb_y;
+      //turb_y.NewAthenaArray(ke-ks,je-js,ie-is);
       turb_y.NewAthenaArray(turb_dim,turb_dim,turb_dim);
-      //turb_y.NewAthenaArray(ks,js,is);
-      HDF5ReadRealArray(input_filename.c_str(), dataset_v2.c_str(), 3, start_field_file,
+      HDF5ReadRealArray(input_filename.c_str(), dataset_v2.c_str(), 4, start_field_file,
                       count_field_file, 3, start_field_mem,
                       count_field_mem, turb_y,true);//read y-velocity
       AthenaArray<Real> turb_z;
+      //turb_z.NewAthenaArray(ke-ks,je-js,ie-is);
       turb_z.NewAthenaArray(turb_dim,turb_dim,turb_dim);
-      //turb_z.NewAthenaArray(ks,js,is);
-      HDF5ReadRealArray(input_filename.c_str(), dataset_v3.c_str(), 3, start_field_file,
+      HDF5ReadRealArray(input_filename.c_str(), dataset_v3.c_str(), 4, start_field_file,
                       count_field_file, 3, start_field_mem,
                       count_field_mem, turb_z,true);//read y-velocity
       for (int k=ks; k<=ke; ++k) {
@@ -386,6 +400,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           }
         }
       }
+        turb_x.DeleteAthenaArray();
+        turb_y.DeleteAthenaArray();
+        turb_z.DeleteAthenaArray();
     }else{
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je; ++j) {
@@ -397,7 +414,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
       }
     }
-
+        */
 }
 //========================================================================================
 /* User defined output */
