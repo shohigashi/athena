@@ -25,8 +25,8 @@ dcycle     = 50
 
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
-nlim       = 50         # cycle limit
-tlim       = 30.0        # time limit
+nlim       = 500000         # cycle limit
+tlim       = 300000        # time limit
 integrator = rk3        # time integration algorithm
 xorder     = 3          # order of spatial reconstruction 3:PPM applied to primitive val, 3c:to characteristic val
 ncycle_out = 10          # interval for stdout summary info
@@ -53,23 +53,17 @@ x3max      =  16.0      # maximum value of X3
 ix3_bc     = periodic   # inner-X3 boundary flag
 ox3_bc     = periodic   # outer-X3 boundary flag
 
-#refinement = adaptive
-#derefine_count = 10
-#numlevel       = 30
+refinement = adaptive
+derefine_count = 3
+numlevel       = 30
 
 <meshblock>
-#nx1         = 8
-#nx2         = 8
-#nx3         = 8
-#nx1         = 32
-#nx2         = 32
-#nx3         = 32
 nx1         = 64
 nx2         = 64
 nx3         = 64
-#nx1         = 128
-#nx2         = 128
-#nx3         = 128
+#nx1         = 256
+#nx2         = 256
+#nx3         = 256
 
 <hydro>
 gamma           = 1.6666666666666667   # gamma = C_p/C_v
@@ -79,6 +73,13 @@ iso_sound_speed = 1.0   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 mgmode          = FMG
 threshold       = 0.0
 output_defect   = true
+fill_ghost      = true
+#ix1_bc          = periodic
+#ox1_bc          = periodic
+#ix2_bc          = periodic
+#ox2_bc          = periodic
+#ix3_bc          = periodic
+#ox3_bc          = periodic
 ix1_bc          = multipole
 ox1_bc          = multipole
 ix2_bc          = multipole
@@ -89,13 +90,14 @@ mporder         = 4
 
 <problem>
 geff            = 1.1 # effective gamma below critical density
-mass            = 1700   # total mass in solar mass
+mass            = 1.7   # total mass in 1e3 solar mass
 temperature     = 200.0  # initial temperature
 f               = 1.585   # density enhancement
-njeans          = 32    # the number of the Jeans length for AMR
-#njeans          = 4    # the number of the Jeans length for AMR
+#njeans          = 128    # the number of the Jeans length for AMR
+njeans          = 64.0    # the number of the Jeans length for AMR
 rhocrit         = 1e-4 # the density where the gas becomes adiabatic [g cm^-3]
-b0              = 1.0769e-5 # B-field strength in z-axis (1.0769e-2 ~ 1e-6 [G])
+#b0              = 1.0769e-5 # B-field strength in z-axis (1.0769e-2 ~ 1e-6 [G])
+b0              = 0.0 # B-field strength in z-axis (1.0769e-2 ~ 1e-6 [G])
 turb_flag  = 1    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
 
 
@@ -104,9 +106,10 @@ dedt = 334 # 0.50 in rms Mach number
 #dedt = 13.358 # 0.10 in rms Mach number
 # dedt=1.0 equls rms Mach number 0.02736 with T=200 K. When dedt = f, rms Mach number takes 0.02736*SQRT(f)
 nlow = 2
-nhigh = 25
+nhigh = 6
 expo = 2.0
-f_shear = 0.666
+#f_shear = 0.48
 rseed = 3958501
+#rseed = -1
 
 

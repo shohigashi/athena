@@ -49,6 +49,7 @@ constexpr Real pi   = M_PI;
 constexpr Real cs10 = 1.9e4;        // sound speed at 10K, cm / s 
 constexpr Real cs200 = 1.214e5;        // sound speed at 200K, cm / s 
 constexpr Real msun = 1.9891e33;    // solar mass, g
+constexpr Real msune3 = 1.9891e36;    // 1e3 solar mass, g
 constexpr Real pc   = 3.0857000e18; // parsec, cm
 constexpr Real au   = 1.4959787e13; // astronomical unit, cm
 constexpr Real yr   = 3.15569e7;    // year, s
@@ -221,7 +222,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   temp = pin->GetReal("problem", "temperature");
   f = pin->GetReal("problem", "f"); // Density enhancement factor; f = 1 is critical
   geff = pin->GetReal("problem","geff");
-  m0 = mass * msun / (bemass*f);
+  m0 = mass * msune3 / (bemass*f);
   //v0 = cs10 * std::sqrt(temp/10.0);
   v0 = cs200 * std::sqrt(temp/200.0);
   rho0 = (v0*v0*v0*v0*v0*v0) / (m0*m0) /(64.0*pi*pi*pi*G*G*G);
@@ -249,7 +250,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (Globals::my_rank == 0 && ncycle == 0) {
     std::cout << std::endl
       << "---  Dimensional parameters of the simulation  ---" << std::endl
-      << "Total mass          : " << mass      << " \t\t[Msun]" << std::endl
+      << "Total mass          : " << mass*1e3      << " \t\t[Msun]" << std::endl
       << "Initial temperature : " << temp      << " \t\t[K]" << std::endl
       << "Sound speed         : " << v0        << " \t\t[cm s^-1]" << std::endl
       << "Central density     : " << rho0      << " \t[g cm^-3]" << std::endl
@@ -260,7 +261,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
       << std::endl
       << "---   Normalization Units of the simulation    ---" << std::endl
       << "Mass                : " << m0        << " \t[g]" << std::endl
-      << "Mass                : " << m0/msun   << " \t[Msun]" << std::endl
+      << "Mass                : " << m0/msune3   << " \t[Msun]" << std::endl
       << "Length              : " << l0        << " \t[cm]" << std::endl
       << "Length              : " << l0/au     << " \t\t[au]" << std::endl
       << "Length              : " << l0/pc     << " \t[pc]" << std::endl
