@@ -92,6 +92,8 @@ void SourceMask(AthenaArray<Real> &src, int is, int ie, int js, int je,
 int JeansCondition(MeshBlock *pmb) {
   Real njmin = 1e300;
   const Real dx = pmb->pcoord->dx1f(0); // assuming uniform cubic cells
+  /* Jeans criterion is the same not dependent on the existence of B-fields for comparison with the model without B-fields.
+   // Sho Higashi 02/06/2022
   if (MAGNETIC_FIELDS_ENABLED) {
     if (NON_BAROTROPIC_EOS) {
       const Real gamma = pmb->peos->GetGamma();
@@ -125,7 +127,7 @@ int JeansCondition(MeshBlock *pmb) {
         }
       }
     }
-  } else {
+  } else {*/
     if (NON_BAROTROPIC_EOS) {
       const Real gamma = pmb->peos->GetGamma();
       const Real fac = 2.0 * pi * std::sqrt(gamma) / dx;
@@ -150,7 +152,7 @@ int JeansCondition(MeshBlock *pmb) {
         }
       }
     }
-  }
+ // }
   if (njmin < njeans)
     return 1;
   if (njmin > njeans * 2.5)

@@ -1,7 +1,7 @@
 <comment>
 problem   = Protostellar collapse
 reference = 
-configure --prob=collapse_primordial --grav=mg -b --flux=hlld -hdf5 -mpi -h5double --nghost=4 --mpiccmd=mpiicpc -fft
+configure --prob=collapse_primordial --grav=mg -b --flux=hlld -hdf5 -mpi -h5double --nghost=4 --mpiccmd=mpicxx -fft
 #configure_wb = --prob=collapse_primordial --grav mg -mpi -hdf5 -b --hlux=hlld -h5double --mpiccmd=mpiicpc
 ### To check the initial conditions, should run with 64 process
 
@@ -29,24 +29,24 @@ nlim       = 500000         # cycle limit
 tlim       = 300000        # time limit
 integrator = rk3        # time integration algorithm
 xorder     = 3          # order of spatial reconstruction 3:PPM applied to primitive val, 3c:to characteristic val
-ncycle_out = 10          # interval for stdout summary info
+ncycle_out = 1          # interval for stdout summary info
 
 <mesh>
-nx1        = 256        # Number of zones in X1-direction
+nx1        = 512        # Number of zones in X1-direction
 #nx1        = 16        # Number of zones in X1-direction
 x1min      = -16.0      # minimum value of X1
 x1max      =  16.0      # maximum value of X1
 ix1_bc     = periodic   # inner-X1 boundary flag
 ox1_bc     = periodic   # outer-X1 boundary flag
 
-nx2        = 256        # Number of zones in X2-direction
+nx2        = 512        # Number of zones in X2-direction
 #nx2        = 16        # Number of zones in X1-direction
 x2min      = -16.0      # minimum value of X2
 x2max      =  16.0      # maximum value of X2
 ix2_bc     = periodic   # inner-X2 boundary flag
 ox2_bc     = periodic   # outer-X2 boundary flag
 
-nx3        = 256        # Number of zones in X3-direction
+nx3        = 512        # Number of zones in X3-direction
 #nx3        = 16        # Number of zones in X1-direction
 x3min      = -16.0      # minimum value of X3
 x3max      =  16.0      # maximum value of X3
@@ -61,9 +61,9 @@ numlevel       = 30
 nx1         = 64
 nx2         = 64
 nx3         = 64
-#nx1         = 256
-#nx2         = 256
-#nx3         = 256
+#nx1         = 128
+#nx2         = 128
+#nx3         = 128
 
 <hydro>
 gamma           = 1.6666666666666667   # gamma = C_p/C_v
@@ -93,20 +93,20 @@ geff            = 1.1 # effective gamma below critical density
 mass            = 1.7   # total mass in 1e3 solar mass
 temperature     = 200.0  # initial temperature
 f               = 1.585   # density enhancement
-#njeans          = 128    # the number of the Jeans length for AMR
-njeans          = 64.0    # the number of the Jeans length for AMR
+njeans          = 128.0    # the number of the Jeans length for AMR
+#njeans          = 64.0    # the number of the Jeans length for AMR
 rhocrit         = 1e-4 # the density where the gas becomes adiabatic [g cm^-3]
-#b0              = 1.0769e-5 # B-field strength in z-axis (1.0769e-2 ~ 1e-6 [G])
-b0              = 0.0 # B-field strength in z-axis (1.0769e-2 ~ 1e-6 [G])
+b0              = 1.0769e-5 # B-field strength in z-axis (1.0769e-2 ~ 1e-6 [G])
+#b0              = 0.0 # B-field strength in z-axis (1.0769e-2 ~ 1e-6 [G])
 turb_flag  = 1    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
 
 
 <turbulence>
 dedt = 334 # 0.50 in rms Mach number
 #dedt = 13.358 # 0.10 in rms Mach number
-# dedt=1.0 equls rms Mach number 0.02736 with T=200 K. When dedt = f, rms Mach number takes 0.02736*SQRT(f)
+# dedt=1.0 #equls rms Mach number 0.02736 with T=200 K. When dedt = f, rms Mach number takes 0.02736*SQRT(f)
 nlow = 2
-nhigh = 6
+nhigh = 51
 expo = 2.0
 #f_shear = 0.48
 rseed = 3958501
